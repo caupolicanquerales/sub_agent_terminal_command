@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import com.capo.sub_agent_terminal_command.response.DataMessage;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 @Service
 public class ExecutingTerminalCommandService {
@@ -16,6 +19,8 @@ public class ExecutingTerminalCommandService {
 	private final ChatClient chatClient;
 	private final String systemPrompt;
 	private final RedisTemplate<String, Object> redisTemplate;
+	private final static String SHOW_VS_CODE="terminal";
+	private final ObjectMapper objectMapper = new ObjectMapper();
 	
 	public ExecutingTerminalCommandService(@Qualifier("chatClientGeneral") ChatClient chatClient,
 			@Qualifier("systemPrompt") String systemPrompt,
@@ -36,11 +41,19 @@ public class ExecutingTerminalCommandService {
 					userMessage = userMessage + "\n[INPUT_FORMAT: RAW_INFORMATION] " + stored.toString();
 				}
 			}
-			return this.chatClient.prompt()
+			String content= this.chatClient.prompt()
 					.messages(new SystemMessage(systemPrompt))
 					.user(userMessage)
 					.call()
 					.content();
+			try {
+				DataMessage dataMessage = new DataMessage();
+				dataMessage.setType(SHOW_VS_CODE);
+				dataMessage.setMessage(content);
+				return objectMapper.writeValueAsString(dataMessage);
+			} catch (Exception e) {
+				return content;
+			}
 		});
 	} 
 }
